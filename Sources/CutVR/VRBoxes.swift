@@ -204,6 +204,32 @@ enum VRBoxes {
         return true
     }
 
+    /// Absolute file offsets of the type field of every `hev1` sample entry.
+    /// AVFoundation cannot decode `hev1`, but plays the same stream when the entry is called `hvc1`.
+    static func hev1EntryOffsets(_ url: URL) throws -> [UInt64] {
+        let (moovOffset, data, _) = try readMoov(url)
+        var found: [UInt64] = []
+        // Walks boxes in data[range]; offsets are relative to data.
+        func walk(_ range: Range<Int>, path: [String]) {
+            var i = range.lowerBound
+            while i + 8 <= range.upperBound {
+                var size = Int(readBE32(data, i)), header = 8
+                if size == 1, i + 16 <= range.upperBound { size = Int(readBE64(data, i + 8)); header = 16 }
+                else if size == 0 { size = range.upperBound - i }
+                guard size >= header, i + size <= range.upperBound else { return }
+                let type = String(decoding: data[(i + 4)..<(i + 8)], as: UTF8.self)
+                if path.last == "stsd" {
+                    if type == "hev1" { found.append(moovOffset + UInt64(i + 4)) }
+                } else if let prefix = ["moov": 0, "trak": 0, "mdia": 0, "minf": 0, "stbl": 0, "stsd": 8][type] {
+                    walk((i + header + prefix)..<(i + size), path: path + [type])
+                }
+                i += size
+            }
+        }
+        walk(0..<data.count, path: [])
+        return found
+    }
+
     private static func isSphericalUUID(_ box: Box) -> Bool {
         box.type == "uuid" && box.payload.count >= 16 && box.payload.prefix(16) == sphericalUUID
     }

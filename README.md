@@ -194,6 +194,7 @@ Times are in seconds, and parts are joined in the given order.
 - Cuts snap **back** to the nearest keyframe, usually less than 0.5 s away. That is the price of lossless editing.
 - Exporting several clips needs free disk space for about **twice the result size** while it runs. Temporary parts sit next to the output and are deleted afterwards.
 - Best results with `.mp4` and `.mov`. Other containers are cut losslessly too, but the VR box restoration step only applies to MP4/MOV.
+- HEVC tagged `hev1` (common in 8K VR exports), which macOS normally refuses to play, previews fine. CutVR patches the tag in memory for the preview only, and the file and the export stay untouched.
 - If your source has **no embedded VR metadata**, CutVR keeps the file name (and its VR tags). The overlay tells you how the headset will detect the format.
 
 ## Project layout

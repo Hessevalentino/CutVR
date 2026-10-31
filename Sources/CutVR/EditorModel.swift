@@ -41,6 +41,7 @@ final class EditorModel: ObservableObject {
     let player = AVPlayer()
     private var asset: AVURLAsset?
     private var videoTrack: AVAssetTrack?
+    private var patchedLoader: PatchedFileLoader?   // keeps the hev1 preview loader alive
     private var timeObserver: Any?
     private var isSeeking = false
     private var pendingSeek: (Double, Bool)?
@@ -94,15 +95,27 @@ final class EditorModel: ObservableObject {
         thumbnails = []
         vrInfo = nil
 
-        let asset = AVURLAsset(url: url)
+        var asset = AVURLAsset(url: url)
         do {
             let duration = try await asset.load(.duration).seconds
-            guard let track = try await asset.loadTracks(withMediaType: .video).first else {
+            guard var track = try await asset.loadTracks(withMediaType: .video).first else {
                 error = "The file has no video track."
                 return
             }
+            // HEVC tagged hev1 (common in 8K VR exports) cannot be decoded by AVFoundation.
+            // The preview reads the file with the tag patched to hvc1 in memory; export still copies the original.
+            var loader: PatchedFileLoader?
+            if !(try await track.load(.isDecodable)),
+               let offsets = try? VRBoxes.hev1EntryOffsets(url), !offsets.isEmpty,
+               let (patched, patchedLoader) = PatchedFileLoader.asset(for: url, patches: offsets.map { ($0, Array("hvc1".utf8)) }),
+               let patchedTrack = try await patched.loadTracks(withMediaType: .video).first {
+                asset = patched
+                track = patchedTrack
+                loader = patchedLoader
+            }
             self.asset = asset
             self.videoTrack = track
+            self.patchedLoader = loader
             self.url = url
             self.duration = duration
             self.videoSize = try await track.load(.naturalSize)
