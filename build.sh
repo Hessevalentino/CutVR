@@ -6,6 +6,9 @@ cd "$(dirname "$0")"
 ARCHS=(--arch arm64 --arch x86_64)
 swift build -c release "${ARCHS[@]}"
 BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/CutVR"
+# Version = 1.0.<commit count>, identical locally and in CI (the updater compares it with release tags).
+VERSION="${VERSION:-1.0.$(git rev-list --count HEAD 2>/dev/null || echo 0)}"
+BUILD="${VERSION##*.}"
 APP=dist/CutVR.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -17,16 +20,16 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0"><dict>
   <key>CFBundleName</key><string>CutVR</string>
   <key>CFBundleDisplayName</key><string>CutVR</string>
-  <key>CFBundleIdentifier</key><string>local.cutvr</string>
+  <key>CFBundleIdentifier</key><string>works.hesse.CutVR</string>
   <key>CFBundleExecutable</key><string>CutVR</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
+  <key>CFBundleVersion</key><string>$BUILD</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSRequiresAquaSystemAppearance</key><false/>
 </dict></plist>
 PLIST
 codesign --force --sign - "$APP"
-echo "Done: $PWD/$APP"
+echo "Done: $PWD/$APP ($VERSION)"

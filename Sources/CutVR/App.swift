@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct CutVRApp: App {
     @StateObject private var model = EditorModel()
+    @StateObject private var updater = Updater.shared
 
     init() {
         // Headless mode for scripting/testing: CutVR --cut <src> <dest> <start-end> [<start-end> …]
@@ -27,13 +28,16 @@ struct CutVRApp: App {
 
     var body: some Scene {
         Window("CutVR", id: "main") {
-            ContentView().environmentObject(model)
+            ContentView().environmentObject(model).environmentObject(updater)
+                .onAppear { updater.checkOnLaunch() }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 780, height: 600)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About CutVR") { showAbout() }
+                Button("Check for Updates…") { Task { await updater.check(userInitiated: true) } }
+                    .disabled(updater.isInstalling || model.isExporting)
             }
         }
     }

@@ -14,6 +14,7 @@ enum Theme {
 
 struct ContentView: View {
     @EnvironmentObject var model: EditorModel
+    @EnvironmentObject var updater: Updater
     @State private var dropTargeted = false
     @AppStorage("showOverlay") private var showOverlay = true
 
@@ -67,6 +68,7 @@ struct ContentView: View {
                 Text(url.lastPathComponent).foregroundStyle(Theme.text2).lineLimit(1).truncationMode(.middle)
             }
             Spacer()
+            updateBadge
             vrBadge
             if model.url != nil {
                 Toggle(isOn: $showOverlay) { Image(systemName: "visionpro") }
@@ -75,6 +77,25 @@ struct ContentView: View {
                     .help("Show headset parameters over the video (H)")
             }
             Button("Open…") { openPanel() }.keyboardShortcut("o")
+        }
+    }
+
+    @ViewBuilder private var updateBadge: some View {
+        if updater.isInstalling {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Updating…").font(.system(size: 11, weight: .semibold))
+            }
+        } else if let release = updater.available {
+            Button { updater.promptInstall() } label: {
+                Label("Update \(release.version)", systemImage: "arrow.down.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent)
+            .controlSize(.small)
+            .disabled(model.isExporting)
+            .help("A new version of CutVR is available on GitHub")
         }
     }
 

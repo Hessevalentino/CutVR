@@ -109,6 +109,16 @@ Changed your mind? **⌘Z**.
 
 Requires macOS 15 or newer.
 
+## Updates
+
+CutVR keeps itself up to date. Every improvement pushed to this repository is automatically built and published as a new [release](https://github.com/Hessevalentino/CutVR/releases).
+
+- At launch, CutVR checks GitHub. When a newer version exists, an **Update** button appears in the top bar.
+- You can also check at any time with **CutVR → Check for Updates…**
+- One click downloads the new version, verifies its code signature, replaces the app and relaunches it. Your edits are not affected, but finish running exports first.
+
+Versions are numbered `1.0.<build>`, where the build number grows with every commit.
+
 ## Build from source
 
 ```sh
@@ -164,15 +174,17 @@ Times are in seconds, and parts are joined in the given order.
 
 ```
 Sources/CutVR/
-  App.swift           app entry, About panel, command-line mode
+  App.swift           app entry, About panel, menu, command-line mode
   EditorModel.swift   clips, cutting, playback mapping, export
   Views.swift         main window
   TimelineView.swift  clip timeline with scissors tool
   PreviewViews.swift  video preview and headset overlay
   Tools.swift         ffmpeg/exiftool runner, VR probe, exporter
   VRBoxes.swift       byte-exact MP4/MOV VR box transfer
+  Updater.swift       self-update from GitHub Releases
 Icon/make_icon.swift  generates the app icon
-build.sh              builds dist/CutVR.app
+build.sh              builds dist/CutVR.app (universal, versioned)
+.github/workflows/    builds and publishes a release on every push
 ```
 
 ## License
