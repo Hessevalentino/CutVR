@@ -61,6 +61,28 @@ CutVR fixes both:
 - 🥽 **Headset-ready.** Projection, stereo layout and spherical tags come out **byte for byte** as they went in, and CutVR checks the result after every export.
 - 🪶 **Dead simple.** Cut, delete, export. That's the whole workflow.
 
+## See it in action
+
+<p align="center">
+  <img src="docs/screenshot-main.jpg" width="100%" alt="CutVR main window: stereo preview with headset parameter overlay and a timeline of four clips">
+  <br><sub>Cut the video into clips, delete what you don't need. The overlay shows everything the headset cares about.</sub>
+</p>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshot-single.jpg" alt="Single view showing one eye of the stereo video, with the scissors tool active">
+      <br><sub><b>Single view & scissors.</b> One clean picture instead of two, and the scissors tool for cutting right on the timeline.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshot-export.jpg" alt="Export finished with VR metadata preserved 1:1">
+      <br><sub><b>Verified export.</b> Every VR tag is checked after export. A green ✓ means the headset sees exactly what it saw before.</sub>
+    </td>
+  </tr>
+</table>
+
+<sub>Screenshots use a neutral demo clip (2160×1080, 180° side-by-side with embedded VR metadata).</sub>
+
 ## How it works: three moves
 
 | | |
