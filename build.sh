@@ -2,11 +2,14 @@
 # Builds CutVR.app into ./dist
 set -e
 cd "$(dirname "$0")"
-swift build -c release
+# Universal binary: Apple Silicon + Intel
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}"
+BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/CutVR"
 APP=dist/CutVR.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/release/CutVR "$APP/Contents/MacOS/CutVR"
+cp "$BIN" "$APP/Contents/MacOS/CutVR"
 cp Icon/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

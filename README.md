@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/preview.jpg" width="100%" alt="CutVR – lossless VR video editing">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white" alt="macOS 15+">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/SwiftUI-native-0D96F6?logo=swift&logoColor=white" alt="SwiftUI">
@@ -90,15 +94,22 @@ Changed your mind? **⌘Z**.
 
 > **Why not just use FFmpeg?** Because `ffmpeg -c copy` alone silently breaks VR files. Into `.mov` it drops `st3d`/`sv3d` entirely. Into `.mp4` it adds a `vexu` box that overrides the stereo mode, so readers see it as "unspecified". The Google V1 tag is always lost. CutVR lets FFmpeg do the fast cutting, then writes the source's VR boxes back byte for byte.
 
-## Install
+## Download
 
-**Requirements:** macOS 15 or newer, Apple Silicon or Intel, and two free command-line tools:
+1. Grab **CutVR.zip** from the [latest release](https://github.com/Hessevalentino/CutVR/releases/latest). It is a universal app for Apple Silicon and Intel.
+2. Unzip it and drag **CutVR.app** to your Applications folder.
+3. Install the two free helpers CutVR uses:
 
-```sh
-brew install ffmpeg exiftool
-```
+   ```sh
+   brew install ffmpeg exiftool
+   ```
 
-**Build the app:**
+4. **First launch:** the app is not notarized by Apple, so macOS will warn you. Right-click **CutVR.app → Open → Open**. You only need to do this once.
+   If macOS still refuses, run `xattr -dr com.apple.quarantine /Applications/CutVR.app`.
+
+Requires macOS 15 or newer.
+
+## Build from source
 
 ```sh
 git clone https://github.com/Hessevalentino/CutVR.git
@@ -107,7 +118,7 @@ cd CutVR
 open dist/CutVR.app
 ```
 
-Drag `dist/CutVR.app` to your Applications folder if you like. Xcode or the Command Line Tools (Swift 6) are needed to build.
+Needs Xcode or the Command Line Tools (Swift 6), plus `brew install ffmpeg exiftool`. The build produces a universal binary.
 
 ## Keyboard shortcuts
 

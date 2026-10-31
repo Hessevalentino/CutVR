@@ -1,5 +1,6 @@
 import AVFoundation
 import AppKit
+import UniformTypeIdentifiers
 
 /// A piece of the source video. The edit is the clips played one after another.
 struct Clip: Identifiable, Equatable {
@@ -278,8 +279,14 @@ final class EditorModel: ObservableObject {
         // Original name stays at the end so VR tokens (e.g. _180_LR) that players read are kept.
         panel.nameFieldStringValue = "EDIT_" + url.lastPathComponent
         panel.canCreateDirectories = true
+        // Output always uses the source container: ffmpeg picks the muxer from the extension,
+        // and VR box transfer only works MP4→MP4 / MOV→MOV.
+        let ext = url.pathExtension
+        if let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
         guard panel.runModal() == .OK, var dest = panel.url else { return }
-        if dest.pathExtension.isEmpty { dest.appendPathExtension(url.pathExtension) }
+        if dest.pathExtension.lowercased() != ext.lowercased() {
+            dest = dest.deletingPathExtension().appendingPathExtension(ext)
+        }
         if dest.standardizedFileURL == url.standardizedFileURL {
             error = "Cannot overwrite the source file."
             return
