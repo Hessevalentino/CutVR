@@ -157,10 +157,13 @@ enum StereoLayout {
 struct PlayerView: NSViewRepresentable {
     let player: AVPlayer
     var singleEye: StereoLayout? = nil   // nil: whole frame
+    var cornerRadius: CGFloat = 0
 
     func makeNSView(context: Context) -> PlayerNSView {
         let v = PlayerNSView()
         v.playerLayer.player = player
+        v.layer?.cornerRadius = cornerRadius
+        v.layer?.cornerCurve = .continuous
         return v
     }
     func updateNSView(_ nsView: PlayerNSView, context: Context) {

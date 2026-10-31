@@ -21,7 +21,10 @@ struct TimelineView: View {
 
                 Group {
                     RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.bg)
-                    thumbnails(scale: scale, offsets: offsets)
+                    ThumbnailStrip(clips: model.clips, thumbs: model.thumbnails, scale: scale,
+                                   aspect: model.videoSize.height > 0 ? min(2.2, model.videoSize.width / model.videoSize.height) : 16 / 9)
+                        .equatable()
+                        .frame(height: trackHeight)
 
                     // clip frames, selection and numbers
                     ForEach(Array(model.clips.enumerated()), id: \.element.id) { i, clip in
@@ -136,12 +139,25 @@ struct TimelineView: View {
         .offset(x: x - 6)
         .allowsHitTesting(false)
     }
+}
 
-    /// Each clip shows thumbnails of its own source range.
-    private func thumbnails(scale: Double, offsets: [Double]) -> some View {
-        let thumbs = model.thumbnails.sorted { $0.time < $1.time }
-        let aspect = model.videoSize.height > 0 ? min(2.2, model.videoSize.width / model.videoSize.height) : 16 / 9
-        let clips = model.clips
+/// Thumbnails of each clip's own source range. Equatable so the playhead moving 30× a second
+/// doesn't redraw every thumbnail.
+private struct ThumbnailStrip: View, Equatable {
+    let clips: [Clip]
+    let thumbs: [(time: Double, image: CGImage)]
+    let scale: Double
+    let aspect: Double
+
+    static func == (a: Self, b: Self) -> Bool {
+        a.clips == b.clips && a.thumbs.count == b.thumbs.count && a.scale == b.scale && a.aspect == b.aspect
+    }
+
+    var body: some View {
+        let thumbs = thumbs.sorted { $0.time < $1.time }
+        var offsets: [Double] = []
+        var t = 0.0
+        for c in clips { offsets.append(t); t += c.length }
         return Canvas { ctx, size in
             guard scale > 0 else { return }
             let tw = size.height * aspect
@@ -155,7 +171,7 @@ struct TimelineView: View {
                     var x = x0
                     while x < x0 + cw {
                         let t = clip.start + (x + tw / 2 - x0) / scale
-                        layer.draw(Image(decorative: nearest(thumbs, t), scale: 1),
+                        layer.draw(Image(decorative: Self.nearest(thumbs, t), scale: 1),
                                    in: CGRect(x: x, y: 0, width: tw, height: size.height))
                         x += tw
                     }
@@ -163,10 +179,9 @@ struct TimelineView: View {
             }
         }
         .opacity(0.8)
-        .frame(height: trackHeight)
     }
 
-    private func nearest(_ thumbs: [(time: Double, image: CGImage)], _ t: Double) -> CGImage {
+    private static func nearest(_ thumbs: [(time: Double, image: CGImage)], _ t: Double) -> CGImage {
         var lo = 0, hi = thumbs.count - 1
         while lo < hi {
             let mid = (lo + hi) / 2

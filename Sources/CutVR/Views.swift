@@ -130,14 +130,16 @@ struct ContentView: View {
 
     private var viewer: some View {
         VStack(spacing: 14) {
-            // aspectRatio comes last so the clip, border and overlay hug the visible picture.
-            PlayerView(player: model.player, singleEye: shownEye)
+            // aspectRatio comes last so the border and overlay hug the visible picture.
+            // Rounded corners are done by the player layer itself and the shadow sits on a static shape behind it:
+            // a SwiftUI clip or shadow on the video would force an extra render pass for every (8K) frame.
+            PlayerView(player: model.player, singleEye: shownEye, cornerRadius: 10)
                 .overlay(alignment: .topLeading) {
                     if showOverlay { HeadsetOverlay().padding(10) }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.hairline))
-                .shadow(color: .black.opacity(0.5), radius: 18, y: 8)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.black)
+                    .shadow(color: .black.opacity(0.5), radius: 18, y: 8))
                 .aspectRatio(previewAspect, contentMode: .fit)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             transport

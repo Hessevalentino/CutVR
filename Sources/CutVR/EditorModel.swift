@@ -77,7 +77,10 @@ final class EditorModel: ObservableObject {
         if isPlaying && source >= clip.end - 0.5 / frameRate {
             if playingClip + 1 < clips.count {
                 playingClip += 1
-                seekSource(clips[playingClip].start, precise: true)
+                // A cut without removed material in between needs no seek; the player just plays on.
+                if abs(clips[playingClip].start - clip.end) > 0.5 / frameRate {
+                    seekSource(clips[playingClip].start, precise: true)
+                }
                 current = clipOffsets[playingClip]
             } else {
                 player.pause()
@@ -198,7 +201,9 @@ final class EditorModel: ObservableObject {
     private func seekSource(_ t: Double, precise: Bool) {
         if isSeeking { pendingSeek = (t, precise); return }
         isSeeking = true
-        let tol = precise ? CMTime.zero : CMTime(seconds: 0.4, preferredTimescale: 600)
+        // Non-precise (scrubbing) shows the nearest keyframe: on long-GOP files (8K HEVC often has a keyframe
+        // only every few seconds) a precise seek decodes hundreds of frames and takes up to 2 s.
+        let tol = precise ? CMTime.zero : CMTime.positiveInfinity
         player.seek(to: CMTime(seconds: t, preferredTimescale: 60000), toleranceBefore: tol, toleranceAfter: tol) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
@@ -214,7 +219,15 @@ final class EditorModel: ObservableObject {
     func step(frames: Int) {
         player.pause()
         isPlaying = false
-        seek(to: current + Double(frames) / frameRate)
+        let target = min(max(0, current + Double(frames) / frameRate), editDuration)
+        // Stepping continues from the decoded frame (a few ms); a precise seek may decode a whole GOP first.
+        if let item = player.currentItem, !isSeeking, locate(target)?.index == playingClip,
+           frames > 0 ? item.canStepForward : item.canStepBackward {
+            item.step(byCount: frames)
+            current = target
+        } else {
+            seek(to: target)
+        }
     }
 
     // MARK: Editing
