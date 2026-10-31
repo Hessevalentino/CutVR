@@ -39,19 +39,23 @@ enum Describe {
 
 /// How a headset player will recognise the video.
 enum HeadsetStatus {
-    case checking, embedded(Int), fileName, none
+    case checking, embedded(Int), willAdd(VRFormat), fileName, none
 
-    init(_ info: VRInfo?) {
+    init(_ info: VRInfo?, adding: VRFormat? = nil) {
         guard let info else { self = .checking; return }
         if info.hasEmbedded { self = .embedded(info.entries.count) }
+        else if let adding { self = .willAdd(adding) }
         else if !info.filenameTags.isEmpty { self = .fileName }
         else { self = .none }
     }
+
+    @MainActor init(_ model: EditorModel) { self.init(model.vrInfo, adding: model.addVR) }
 
     var title: String {
         switch self {
         case .checking: return "Checking…"
         case .embedded: return "Headset ready"
+        case .willAdd: return "Added on export"
         case .fileName: return "Detected by file name"
         case .none: return "No VR metadata"
         }
@@ -61,6 +65,7 @@ enum HeadsetStatus {
         switch self {
         case .checking: return "Checking…"
         case .embedded(let n): return "VR metadata · \(n)"
+        case .willAdd(let f): return "Adding \(f.title)"
         case .fileName: return "VR by file name"
         case .none: return "No VR metadata"
         }
@@ -70,8 +75,9 @@ enum HeadsetStatus {
         switch self {
         case .checking: return "Reading the file's VR metadata."
         case .embedded: return "Players detect the format automatically. CutVR keeps every entry 1:1 on export."
-        case .fileName: return "No embedded metadata, but players that read file names (DeoVR, HereSphere, Skybox) detect it. The name is kept on export."
-        case .none: return "Headsets will show it flat. Set the format in the player, or add a tag such as _180_LR to the export name."
+        case .willAdd(let f): return "The file has no VR metadata. Export writes \(f.title) metadata (st3d/sv3d) into the file and suggests a name ending in \(f.nameTag), so headsets detect it automatically."
+        case .fileName: return "No embedded metadata, but players that read file names (DeoVR, HereSphere, Skybox) detect it. Choose the format below to write it into the file too."
+        case .none: return "Headsets will show it flat. Choose the format below and CutVR writes it into the exported file."
         }
     }
 
@@ -79,6 +85,7 @@ enum HeadsetStatus {
         switch self {
         case .checking: return "hourglass"
         case .embedded: return "checkmark.seal.fill"
+        case .willAdd: return "plus.circle.fill"
         case .fileName: return "textformat"
         case .none: return "exclamationmark.triangle.fill"
         }
@@ -88,6 +95,7 @@ enum HeadsetStatus {
         switch self {
         case .checking: return Theme.text2
         case .embedded: return Theme.ok
+        case .willAdd: return Theme.accent
         case .fileName: return Theme.warn
         case .none: return .orange
         }
@@ -107,7 +115,7 @@ struct HeadsetOverlay: View {
             row("Layout", Describe.layout(model))
             row("Projection", Describe.projection(model))
             row("Name tags", Describe.nameTags(model))
-            row("Headset", HeadsetStatus(model.vrInfo).title)
+            row("Headset", HeadsetStatus(model).title)
         }
         .font(.system(size: 10.5, design: .monospaced))
         .padding(.horizontal, 10).padding(.vertical, 8)

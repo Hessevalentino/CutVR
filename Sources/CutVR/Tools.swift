@@ -129,6 +129,56 @@ struct VRInfo {
     }
 }
 
+/// VR format CutVR can write into a file that has no embedded VR metadata.
+enum VRFormat: String, CaseIterable, Identifiable {
+    case sbs180, tb180, mono180, sbs360, tb360, mono360
+
+    var id: String { rawValue }
+    var is180: Bool { [.sbs180, .tb180, .mono180].contains(self) }
+
+    /// st3d stereo_mode: 0 mono, 1 top-bottom, 2 left-right.
+    var stereoMode: UInt8 {
+        switch self {
+        case .sbs180, .sbs360: return 2
+        case .tb180, .tb360: return 1
+        case .mono180, .mono360: return 0
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .sbs180: return "180° side-by-side"
+        case .tb180: return "180° top-bottom"
+        case .mono180: return "180° mono"
+        case .sbs360: return "360° side-by-side"
+        case .tb360: return "360° top-bottom"
+        case .mono360: return "360° mono"
+        }
+    }
+
+    /// File name tag that players reading names understand.
+    var nameTag: String {
+        switch self {
+        case .sbs180: return "_180_LR"
+        case .tb180: return "_180_TB"
+        case .mono180: return "_180"
+        case .sbs360: return "_360_LR"
+        case .tb360: return "_360_TB"
+        case .mono360: return "_360"
+        }
+    }
+
+    init?(cliName: String) { self.init(rawValue: cliName.lowercased()) }
+
+    /// Best guess from the frame shape: 2:1 is usually 180° side-by-side (two square eyes).
+    static func suggested(for size: CGSize) -> VRFormat? {
+        guard size.height > 0 else { return nil }
+        let r = size.width / size.height
+        if r > 1.9 && r < 2.1 { return .sbs180 }
+        return nil
+    }
+}
+
 struct ExportReport {
     var ok: Bool
     var message: String
@@ -155,7 +205,8 @@ enum Exporter {
     /// One segment is cut straight to `dest`. Several are cut into temporary parts next to `dest`
     /// and joined with the concat demuxer. (Concat with inpoint/outpoint directly on the source
     /// loses ~1 s of video per join on files interleaved in 1 s chunks.)
-    static func export(source: URL, segments: [Segment], dest: URL,
+    /// `addVR` writes Google Spherical V2 metadata (st3d/sv3d) when the source has no embedded VR metadata.
+    static func export(source: URL, segments: [Segment], dest: URL, addVR: VRFormat? = nil,
                        started: ((Process) -> Void)? = nil,
                        progress: ((Double, String) -> Void)? = nil) async -> ExportReport {
         guard let ffmpeg = Tool.path("ffmpeg") else {
@@ -240,14 +291,29 @@ enum Exporter {
 
         var notes: [String] = []
         var boxesOK = true
+        var added: VRBoxes.TrackVR?
+        var addedFormat: VRFormat?
         if isMP4Family {
             // Must run while moov is still at the end of the file (exiftool moves it to the front).
             progress?(1, "Transferring VR boxes…")
+            let sourceHasVR = addVR == nil ? true : await VRInfo.probe(source).hasEmbedded
             do {
-                try VRBoxes.transfer(from: source, to: dest)
+                if let format = addVR {
+                    // Only when the source has nothing of its own; existing metadata always wins.
+                    let srcBoxes = try VRBoxes.extract(source)
+                    if srcBoxes.allSatisfy(\.isEmpty) && !sourceHasVR {
+                        added = VRBoxes.sphericalV2(format)
+                        try VRBoxes.write([added!], to: dest)
+                        addedFormat = format
+                    } else {
+                        try VRBoxes.transfer(from: source, to: dest)
+                    }
+                } else {
+                    try VRBoxes.transfer(from: source, to: dest)
+                }
             } catch {
                 boxesOK = false
-                notes.append("Cannot transfer VR boxes: \(error)")
+                notes.append("Cannot write VR boxes: \(error)")
             }
 
             // ffmpeg drops QuickTime udta (title, author, thumbnail…) – exiftool copies it back from the source.
@@ -262,8 +328,10 @@ enum Exporter {
             }
 
             if boxesOK {
-                boxesOK = (try? VRBoxes.extract(source) == VRBoxes.extract(dest)) ?? false
-                if !boxesOK { notes.append("VR boxes (st3d/sv3d/vexu/uuid) differ from the source!") }
+                let expected = try? added.map { [$0] } ?? VRBoxes.extract(source)
+                boxesOK = expected != nil && expected == (try? VRBoxes.extract(dest))
+                if !boxesOK { notes.append(added == nil ? "VR boxes (st3d/sv3d/vexu/uuid) differ from the source!"
+                                                        : "The added VR boxes could not be read back!") }
             }
         }
 
@@ -273,7 +341,13 @@ enum Exporter {
         let missing = src.entries.filter { !out.entries.contains($0) }
 
         var report = ExportReport(ok: missing.isEmpty && boxesOK, message: "", missing: missing, outputURL: dest)
-        if !src.hasEmbedded {
+        if let format = addedFormat {
+            let readBack = out.hasEmbedded && out.stereoMode != nil && out.projection != nil
+            report.ok = boxesOK && readBack
+            report.message = report.ok
+                ? "Saved. VR metadata added: \(format.title) (\(out.stereoMode!), \(out.projection!)) ✓"
+                : "Saved, but the added VR metadata could not be verified!"
+        } else if !src.hasEmbedded {
             report.message = "Saved. The source has no embedded VR metadata – the file name was kept."
         } else if report.ok {
             report.message = "Saved. VR metadata preserved 1:1 (\(src.entries.count) entries) ✓"

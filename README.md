@@ -106,6 +106,7 @@ Changed your mind? **⌘Z**.
 - **Mute (M).** Silence the preview while you edit. CutVR remembers the setting.
 - **Inspector (I).** A side panel with the headset status, video details, VR format and edit summary. If the file has no VR metadata, it tells you what to do about it.
 - **Headset parameter overlay (H).** Resolution, frame rate, codec, bitrate, stereo layout, projection, file-name VR tags, and whether the headset will detect the format by itself.
+- **Add missing VR metadata.** Some files lost their VR metadata on the way (ffmpeg drops it easily), so headsets show them flat. Pick the format in the inspector (180°/360°, side-by-side, top-bottom or mono) and CutVR writes standard Google Spherical V2 boxes (`st3d` + `sv3d`) into the export. It also suggests a name such as `_180_LR` for players that read file names. Nothing is re-encoded.
 - **VR metadata check.** A badge shows at a glance whether the file carries embedded VR metadata. After export, a ✓ confirms that nothing was lost.
 - **Keyframe-accurate cuts.** Stream copy can only start a clip on a keyframe, so CutVR snaps every cut there and moves the playhead to it. What you see is what you get.
 - **Smart file names.** Output is `EDIT_<original name>`, so tags like `_180_LR` or `_3dh` that players read from the name stay intact.
@@ -188,6 +189,12 @@ dist/CutVR.app/Contents/MacOS/CutVR --cut in.mp4 out.mp4 0-30 120.02-150
 
 Times are in seconds, and parts are joined in the given order.
 
+Add `--vr <format>` to write VR metadata into a file that has none: `sbs180`, `tb180`, `mono180`, `sbs360`, `tb360` or `mono360`.
+
+```sh
+dist/CutVR.app/Contents/MacOS/CutVR --vr sbs180 --cut in.mp4 out_180_LR.mp4 0-60
+```
+
 ## Under the hood
 
 1. **Cut.** Each kept clip is extracted with `ffmpeg -ss … -t … -c copy`, with no decoding and no encoding.
@@ -202,7 +209,7 @@ Times are in seconds, and parts are joined in the given order.
 - Exporting several clips needs free disk space for about **twice the result size** while it runs. Temporary parts sit next to the output and are deleted afterwards.
 - Best results with `.mp4` and `.mov`. Other containers are cut losslessly too, but the VR box restoration step only applies to MP4/MOV.
 - HEVC tagged `hev1` (common in 8K VR exports), which macOS normally refuses to play, previews fine. CutVR patches the tag in memory for the preview only, and the file and the export stay untouched.
-- If your source has **no embedded VR metadata**, CutVR keeps the file name (and its VR tags). The overlay tells you how the headset will detect the format.
+- If your source has **no embedded VR metadata**, the inspector says so and lets you choose the format to write on export. Existing metadata is never overwritten, it is always copied 1:1.
 
 ## Project layout
 

@@ -6,9 +6,19 @@ struct CutVRApp: App {
     @StateObject private var updater = Updater.shared
 
     init() {
-        // Headless mode for scripting/testing: CutVR --cut <src> <dest> <start-end> [<start-end> …]
-        // Parts (in seconds) are joined in the given order.
-        let args = CommandLine.arguments
+        // Headless mode for scripting/testing: CutVR [--vr <format>] --cut <src> <dest> <start-end> [<start-end> …]
+        // Parts (in seconds) are joined in the given order. --vr sbs180|tb180|mono180|sbs360|tb360|mono360
+        // writes VR metadata when the source has none.
+        var args = CommandLine.arguments
+        var addVR: VRFormat?
+        if let v = args.firstIndex(of: "--vr"), v + 1 < args.count {
+            guard let format = VRFormat(cliName: args[v + 1]) else {
+                print("Unknown --vr format. Use one of: " + VRFormat.allCases.map(\.rawValue).joined(separator: ", "))
+                exit(2)
+            }
+            addVR = format
+            args.removeSubrange(v...(v + 1))
+        }
         if let i = args.firstIndex(of: "--cut"), args.count >= i + 4 {
             let src = URL(fileURLWithPath: args[i + 1]), dest = URL(fileURLWithPath: args[i + 2])
             let segments = args[(i + 3)...].compactMap { arg -> Exporter.Segment? in
@@ -16,7 +26,7 @@ struct CutVRApp: App {
                 return p.count == 2 ? Exporter.Segment(start: p[0], end: p[1]) : nil
             }
             Task {
-                let r = await Exporter.export(source: src, segments: segments, dest: dest)
+                let r = await Exporter.export(source: src, segments: segments, dest: dest, addVR: addVR)
                 print(r.message)
                 r.missing.forEach { print("missing: \($0)") }
                 exit(r.ok ? 0 : 1)

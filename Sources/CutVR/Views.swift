@@ -88,7 +88,7 @@ struct ContentView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             updateBadge
             if model.url != nil {
-                HeadsetPill(status: HeadsetStatus(model.vrInfo))
+                HeadsetPill(status: HeadsetStatus(model))
                     .onTapGesture { showInspector = true }
             }
             Button { openPanel() } label: { Label("Open", systemImage: "folder") }
@@ -340,7 +340,7 @@ struct InspectorView: View {
     }
 
     private var headsetCard: some View {
-        let status = HeadsetStatus(model.vrInfo)
+        let status = HeadsetStatus(model)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: status.icon).foregroundStyle(status.color)
@@ -349,6 +349,7 @@ struct InspectorView: View {
             Text(status.detail)
                 .font(.system(size: 11)).foregroundStyle(Theme.text2)
                 .fixedSize(horizontal: false, vertical: true)
+            if canAddVR { addVRPicker }
             if let entries = model.vrInfo?.entries, !entries.isEmpty {
                 DisclosureGroup("\(entries.count) metadata entries") {
                     Text(entries.joined(separator: "\n"))
@@ -365,6 +366,36 @@ struct InspectorView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(status.color.opacity(0.09)))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(status.color.opacity(0.25)))
+    }
+
+    /// Writing VR metadata needs MP4/MOV and a source without any of its own.
+    private var canAddVR: Bool {
+        guard let info = model.vrInfo, !info.hasEmbedded, let ext = model.url?.pathExtension.lowercased() else { return false }
+        return ["mp4", "mov", "m4v"].contains(ext)
+    }
+
+    private var addVRPicker: some View {
+        let suggested = VRFormat.suggested(for: model.videoSize)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("VR format to write on export")
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.text2)
+            Picker("VR format", selection: $model.addVR) {
+                Text("Don't add").tag(VRFormat?.none)
+                Divider()
+                ForEach(VRFormat.allCases) { f in
+                    Text(f.title).tag(VRFormat?.some(f))
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .disabled(model.isExporting)
+            if model.addVR == nil, let suggested {
+                Button("Use \(suggested.title)") { model.addVR = suggested }
+                    .buttonStyle(BarButtonStyle(compact: true))
+                    .help("Frame shape 2:1 – two square eyes side by side, the usual VR180 layout")
+            }
+        }
+        .padding(.top, 4)
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {

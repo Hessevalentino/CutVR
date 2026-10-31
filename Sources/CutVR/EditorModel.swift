@@ -27,6 +27,8 @@ final class EditorModel: ObservableObject {
     @Published var codec = ""
     @Published var bitrate: Double = 0          // bits per second
 
+    @Published var addVR: VRFormat?            // written on export when the source has no VR metadata
+
     @Published var clips: [Clip] = []
     @Published var selectedClip: Clip.ID?
     @Published var tool: EditTool = .select
@@ -126,6 +128,7 @@ final class EditorModel: ObservableObject {
                 let sub = CMFormatDescriptionGetMediaSubType(fd)
                 self.codec = String(bytes: [24, 16, 8, 0].map { UInt8((sub >> $0) & 0xff) }, encoding: .ascii) ?? ""
             }
+            addVR = nil
             clips = [Clip(start: 0, end: duration)]
             history = []
             selectedClip = nil
@@ -290,7 +293,12 @@ final class EditorModel: ObservableObject {
         let panel = NSSavePanel()
         panel.directoryURL = url.deletingLastPathComponent()
         // Original name stays at the end so VR tokens (e.g. _180_LR) that players read are kept.
-        panel.nameFieldStringValue = "EDIT_" + url.lastPathComponent
+        var name = url.deletingPathExtension().lastPathComponent
+        // Added VR metadata also goes into the name, for players that only read file names.
+        if let format = addVR, vrInfo?.hasEmbedded != true, vrInfo?.filenameTags.isEmpty != false {
+            name += format.nameTag
+        }
+        panel.nameFieldStringValue = "EDIT_" + name + (url.pathExtension.isEmpty ? "" : "." + url.pathExtension)
         panel.canCreateDirectories = true
         // Output always uses the source container: ffmpeg picks the muxer from the extension,
         // and VR box transfer only works MP4→MP4 / MOV→MOV.
@@ -304,17 +312,18 @@ final class EditorModel: ObservableObject {
             error = "Cannot overwrite the source file."
             return
         }
-        Task { await export(segments: segments, to: dest) }
+        let addVR = vrInfo?.hasEmbedded == true ? nil : addVR
+        Task { await export(segments: segments, to: dest, addVR: addVR) }
     }
 
-    func export(segments: [Exporter.Segment], to dest: URL) async {
+    func export(segments: [Exporter.Segment], to dest: URL, addVR: VRFormat? = nil) async {
         guard let url else { return }
         player.pause()
         isPlaying = false
         isExporting = true
         exportProgress = 0
         report = nil
-        let report = await Exporter.export(source: url, segments: segments, dest: dest,
+        let report = await Exporter.export(source: url, segments: segments, dest: dest, addVR: addVR,
             started: { p in Task { @MainActor in self.exportProcess = p } },
             progress: { value, status in
                 Task { @MainActor in

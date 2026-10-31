@@ -170,14 +170,20 @@ enum VRBoxes {
     /// Makes the VR boxes of `dest` exactly match `source`. Returns true if the file was changed.
     @discardableResult
     static func transfer(from source: URL, to dest: URL) throws -> Bool {
-        let src = try extract(source)
+        try write(try extract(source), to: dest)
+    }
+
+    /// Sets the VR boxes of each video track of `dest` (in track order; missing tracks get none).
+    /// Returns true if the file was changed.
+    @discardableResult
+    static func write(_ tracks: [TrackVR], to dest: URL) throws -> Bool {
         let (offset, data, isLast) = try readMoov(dest)
         let moov = try parseMoov(data)
         let videoTraks = (moov.children ?? []).filter { $0.type == "trak" && isVideoTrak($0) }
 
         var changed = false
         for (idx, trak) in videoTraks.enumerated() {
-            let want = idx < src.count ? src[idx] : TrackVR()
+            let want = idx < tracks.count ? tracks[idx] : TrackVR()
             for entry in sampleEntries(trak) {
                 let current = entry.children!.filter { entryTypes.contains($0.type) }.map { $0.serialized() }
                 guard current != want.entryBoxes else { continue }
@@ -202,6 +208,22 @@ enum VRBoxes {
         try fh.seek(toOffset: offset)
         try fh.write(contentsOf: newMoov)
         return true
+    }
+
+    /// Google Spherical Video V2 boxes (st3d + sv3d with equirectangular projection) for `format`.
+    static func sphericalV2(_ format: VRFormat) -> TrackVR {
+        func box(_ type: String, _ body: Data) -> Data {
+            be32(UInt32(body.count + 8)) + Data(type.utf8) + body
+        }
+        let fullBoxHeader = Data(count: 4)                                   // version 0, flags 0
+        let st3d = box("st3d", fullBoxHeader + Data([format.stereoMode]))
+        let svhd = box("svhd", fullBoxHeader + Data("CutVR".utf8) + Data([0]))
+        let prhd = box("prhd", fullBoxHeader + Data(count: 12))              // yaw, pitch, roll = 0
+        // Bounds are 0.32 fixed point fractions cropped from each edge; 180° crops a quarter left and right.
+        let side: UInt32 = format.is180 ? 0x4000_0000 : 0
+        let equi = box("equi", fullBoxHeader + be32(0) + be32(0) + be32(side) + be32(side))
+        let sv3d = box("sv3d", svhd + box("proj", prhd + equi))
+        return TrackVR(entryBoxes: [st3d, sv3d])
     }
 
     /// Absolute file offsets of the type field of every `hev1` sample entry.
