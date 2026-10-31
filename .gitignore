@@ -1,0 +1,8 @@
+.build/
+dist/
+.swiftpm/
+Icon/AppIcon.iconset/
+*.mp4
+*.mov
+*.m4v
+.DS_Store
