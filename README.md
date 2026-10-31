@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/preview.jpg" width="100%" alt="CutVR – lossless VR video editing">
+  <img src="docs/preview-top.jpg" width="100%" alt="CutVR – lossless VR video editing">
 </p>
 
 <p align="center">
