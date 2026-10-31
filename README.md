@@ -75,6 +75,8 @@ Changed your mind? **⌘Z**.
 
 - **Scissors and clip workflow.** Cut anywhere, delete any clip, and the remaining clips are joined automatically (ripple delete).
 - **Live preview of the result.** Playback skips deleted parts, so you see exactly what you'll export.
+- **Single view (E).** Stereo video shows one eye only, one clean picture instead of two squeezed ones. Side-by-side and top-bottom are detected from the metadata, the file name or the frame shape.
+- **Mute (M).** Silence the preview while you edit. CutVR remembers the setting.
 - **Headset parameter overlay (H).** Resolution, frame rate, codec, bitrate, stereo layout, projection, file-name VR tags, and whether the headset will detect the format by itself.
 - **VR metadata check.** A badge shows at a glance whether the file carries embedded VR metadata. After export, a ✓ confirms that nothing was lost.
 - **Keyframe-accurate cuts.** Stream copy can only start a clip on a keyframe, so CutVR snaps every cut there and moves the playhead to it. What you see is what you get.
@@ -140,6 +142,8 @@ Needs Xcode or the Command Line Tools (Swift 6), plus `brew install ffmpeg exift
 | **⌘Z** | Undo |
 | **Space** | Play / pause |
 | **←** / **→** | Previous / next frame |
+| **E** | Single view: show one eye of stereo video |
+| **M** | Mute / unmute the preview |
 | **H** | Toggle the headset parameter overlay |
 | **⌘O** | Open video |
 | **⌘S** | Export |

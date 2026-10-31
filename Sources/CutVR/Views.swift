@@ -17,6 +17,22 @@ struct ContentView: View {
     @EnvironmentObject var updater: Updater
     @State private var dropTargeted = false
     @AppStorage("showOverlay") private var showOverlay = true
+    @AppStorage("muted") private var muted = false
+    @AppStorage("singleEye") private var singleEye = false
+
+    private var stereoLayout: StereoLayout? { StereoLayout.detect(model.vrInfo, size: model.videoSize) }
+    private var shownEye: StereoLayout? { singleEye ? stereoLayout : nil }
+
+    /// Aspect ratio of what is shown: the whole frame or one eye.
+    private var previewAspect: CGFloat {
+        guard model.videoSize.width > 0, model.videoSize.height > 0 else { return 16 / 9 }
+        let r = model.videoSize.width / model.videoSize.height
+        switch shownEye {
+        case .sideBySide: return r / 2
+        case .topBottom: return r * 2
+        case nil: return r
+        }
+    }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -24,15 +40,15 @@ struct ContentView: View {
             if model.url == nil {
                 placeholder
             } else {
-                PlayerView(player: model.player)
-                    .aspectRatio(model.videoSize.width > 0 ? model.videoSize.width / model.videoSize.height : 16 / 9,
-                                 contentMode: .fit)
+                // aspectRatio comes last so the clip, border and overlay hug the visible picture.
+                PlayerView(player: model.player, singleEye: shownEye)
                     .overlay(alignment: .topLeading) {
                         if showOverlay { HeadsetOverlay().padding(8) }
                     }
-                    .frame(maxWidth: 520, maxHeight: 280)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.08)))
+                    .aspectRatio(previewAspect, contentMode: .fit)
+                    .frame(maxWidth: 520, maxHeight: shownEye == nil ? 280 : 340)
                     .frame(maxWidth: .infinity)
                 controls
                 TimelineView()
@@ -43,6 +59,8 @@ struct ContentView: View {
         .frame(minWidth: 760, maxWidth: .infinity, minHeight: 540, maxHeight: .infinity)
         .background(Theme.bg.ignoresSafeArea())
         .preferredColorScheme(.dark)
+        .onAppear { model.player.isMuted = muted }
+        .onChange(of: muted) { _, value in model.player.isMuted = value }
         .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
             guard let p = providers.first else { return false }
             _ = p.loadObject(ofClass: URL.self) { url, _ in
@@ -71,6 +89,16 @@ struct ContentView: View {
             updateBadge
             vrBadge
             if model.url != nil {
+                Toggle(isOn: $singleEye) { Image(systemName: singleEye ? "rectangle" : "rectangle.split.2x1") }
+                    .toggleStyle(.button)
+                    .keyboardShortcut("e", modifiers: [])
+                    .disabled(stereoLayout == nil)
+                    .help(stereoLayout == nil ? "Single view is only for stereo (side-by-side or top-bottom) video"
+                                              : "Single view: show one eye only (E)")
+                Toggle(isOn: $muted) { Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill") }
+                    .toggleStyle(.button)
+                    .keyboardShortcut("m", modifiers: [])
+                    .help(muted ? "Unmute (M)" : "Mute (M)")
                 Toggle(isOn: $showOverlay) { Image(systemName: "visionpro") }
                     .toggleStyle(.button)
                     .keyboardShortcut("h", modifiers: [])
