@@ -127,8 +127,8 @@ Changed your mind? **⌘Z**.
 
 ## Download
 
-1. Grab **CutVR.zip** from the [latest release](https://github.com/Hessevalentino/CutVR/releases/latest). It is a universal app for Apple Silicon and Intel.
-2. Unzip it and drag **CutVR.app** to your Applications folder.
+1. Download **[CutVR.dmg](https://github.com/Hessevalentino/CutVR/releases/latest/download/CutVR.dmg)** from the [latest release](https://github.com/Hessevalentino/CutVR/releases/latest). It is a universal app for Apple Silicon and Intel. Prefer a zip? **[CutVR.zip](https://github.com/Hessevalentino/CutVR/releases/latest/download/CutVR.zip)** is there too.
+2. Open the DMG and drag **CutVR** onto the **Applications** folder next to it.
 3. Install the two free helpers CutVR uses:
 
    ```sh

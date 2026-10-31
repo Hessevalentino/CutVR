@@ -1,5 +1,5 @@
 # Every push to main builds CutVR.app and publishes it as a GitHub release.
-# The app's built-in updater downloads CutVR.zip from the latest release.
+# The app's built-in updater downloads CutVR.zip from the latest release; CutVR.dmg is for new installs.
 name: Release
 
 on:
@@ -30,7 +30,14 @@ jobs:
         run: ./build.sh
 
       - name: Package
-        run: ditto -c -k --keepParent dist/CutVR.app CutVR.zip
+        run: |
+          ditto -c -k --keepParent dist/CutVR.app CutVR.zip
+          # Disk image with an Applications shortcut for drag-and-drop install.
+          mkdir dmg
+          ditto dist/CutVR.app dmg/CutVR.app
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname CutVR -srcfolder dmg -ov -format UDZO -fs APFS CutVR.dmg
+          hdiutil verify CutVR.dmg
 
       - name: Publish release
         env:
@@ -42,7 +49,7 @@ jobs:
             echo "## What's new"
             if [ -n "$PREV" ]; then git log --format='- %s' "$PREV..HEAD"; else git log --format='- %s'; fi
             echo
-            echo "**Install:** download CutVR.zip, unzip, move CutVR.app to Applications, then \`brew install ffmpeg exiftool\`."
+            echo "**Install:** download CutVR.dmg, open it and drag CutVR to Applications (or unzip CutVR.zip), then \`brew install ffmpeg exiftool\`."
             echo "Already installed? Use **CutVR → Check for Updates…**"
           } > notes.md
-          gh release create "v$VERSION" CutVR.zip --title "CutVR $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
+          gh release create "v$VERSION" CutVR.dmg CutVR.zip --title "CutVR $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
