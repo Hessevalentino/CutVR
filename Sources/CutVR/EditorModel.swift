@@ -321,7 +321,7 @@ final class EditorModel: ObservableObject {
         if dest.pathExtension.lowercased() != ext.lowercased() {
             dest = dest.deletingPathExtension().appendingPathExtension(ext)
         }
-        if dest.standardizedFileURL == url.standardizedFileURL {
+        if dest.standardizedFileURL == url.standardizedFileURL || Exporter.isSameFile(dest, url) {
             error = "Cannot overwrite the source file."
             return
         }

@@ -194,6 +194,32 @@ enum Exporter {
         var length: Double { end - start }
     }
 
+    /// Joins segments that continue exactly where the previous one ends (left over by a cut with nothing
+    /// removed). Fewer parts means fewer joins; a single segment skips the temporary parts entirely.
+    static func merged(_ segments: [Segment]) -> [Segment] {
+        var out: [Segment] = []
+        for seg in segments {
+            if let last = out.last, abs(seg.start - last.end) < 0.000_001 {
+                out[out.count - 1].end = seg.end
+            } else {
+                out.append(seg)
+            }
+        }
+        return out
+    }
+
+    /// True when both URLs point to the same file on disk, also when the paths differ only in letter case
+    /// (case-insensitive APFS) or lead through a symlink. A file that does not exist is never the same.
+    static func isSameFile(_ a: URL, _ b: URL) -> Bool {
+        func identifier(_ url: URL) -> NSObject? {
+            let resolved = url.standardizedFileURL.resolvingSymlinksInPath()
+            return (try? resolved.resourceValues(forKeys: [.fileResourceIdentifierKey]))?
+                .fileResourceIdentifier as? NSObject
+        }
+        guard let ia = identifier(a), let ib = identifier(b) else { return false }
+        return ia.isEqual(ib)
+    }
+
     static func cut(source: URL, start: Double, end: Double, dest: URL,
                     started: ((Process) -> Void)? = nil,
                     progress: ((Double, String) -> Void)? = nil) async -> ExportReport {
@@ -212,7 +238,12 @@ enum Exporter {
         guard let ffmpeg = Tool.path("ffmpeg") else {
             return ExportReport(ok: false, message: "ffmpeg not found (brew install ffmpeg).")
         }
+        let segments = merged(segments)
         guard !segments.isEmpty else { return ExportReport(ok: false, message: "Nothing to export.") }
+        // ffmpeg runs with -y: writing over the file it reads would destroy the source.
+        guard !isSameFile(source, dest) else {
+            return ExportReport(ok: false, message: "Cannot overwrite the source file.")
+        }
         let ext = dest.pathExtension.lowercased()
         let isMP4Family = ["mp4", "mov", "m4v"].contains(ext)
         let total = segments.reduce(0) { $0 + $1.length }
