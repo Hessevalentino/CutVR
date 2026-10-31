@@ -64,22 +64,27 @@ CutVR fixes both:
 ## See it in action
 
 <p align="center">
-  <img src="docs/screenshot-main.jpg" width="100%" alt="CutVR main window: stereo preview with headset parameter overlay and a timeline of four clips">
-  <br><sub>Cut the video into clips, delete what you don't need. The overlay shows everything the headset cares about.</sub>
+  <img src="docs/ui-main.jpg" width="100%" alt="CutVR main window: large stereo preview, floating playback bar, clip timeline with time ruler and an inspector with headset status">
+  <br><sub>Big preview, one floating playback bar, a timeline with a time ruler, and an inspector that tells you at a glance whether the headset will recognise the video.</sub>
 </p>
 
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/screenshot-single.jpg" alt="Single view showing one eye of the stereo video, with the scissors tool active">
-      <br><sub><b>Single view & scissors.</b> One clean picture instead of two, and the scissors tool for cutting right on the timeline.</sub>
+      <img src="docs/ui-single.jpg" alt="Single view showing one eye of the stereo video, with the scissors tool active and audio muted">
+      <br><sub><b>Single view & scissors.</b> One clean picture instead of two, the scissors tool for cutting right on the timeline, preview muted.</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/screenshot-export.jpg" alt="Export finished with VR metadata preserved 1:1">
-      <br><sub><b>Verified export.</b> Every VR tag is checked after export. A green ✓ means the headset sees exactly what it saw before.</sub>
+      <img src="docs/ui-export.jpg" alt="Export finished with VR metadata preserved 1:1, shown in the status bar">
+      <br><sub><b>Verified export.</b> Every VR tag is checked after export. A green ✓ in the status bar means the headset sees exactly what it saw before.</sub>
     </td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/ui-empty.jpg" width="70%" alt="CutVR start screen: drop a VR video here">
+  <br><sub>Start by dropping a video onto the window.</sub>
+</p>
 
 <sub>Screenshots use a neutral demo clip (2160×1080, 180° side-by-side with embedded VR metadata).</sub>
 
@@ -99,11 +104,12 @@ Changed your mind? **⌘Z**.
 - **Live preview of the result.** Playback skips deleted parts, so you see exactly what you'll export.
 - **Single view (E).** Stereo video shows one eye only, one clean picture instead of two squeezed ones. Side-by-side and top-bottom are detected from the metadata, the file name or the frame shape.
 - **Mute (M).** Silence the preview while you edit. CutVR remembers the setting.
+- **Inspector (I).** A side panel with the headset status, video details, VR format and edit summary. If the file has no VR metadata, it tells you what to do about it.
 - **Headset parameter overlay (H).** Resolution, frame rate, codec, bitrate, stereo layout, projection, file-name VR tags, and whether the headset will detect the format by itself.
 - **VR metadata check.** A badge shows at a glance whether the file carries embedded VR metadata. After export, a ✓ confirms that nothing was lost.
 - **Keyframe-accurate cuts.** Stream copy can only start a clip on a keyframe, so CutVR snaps every cut there and moves the playhead to it. What you see is what you get.
 - **Smart file names.** Output is `EDIT_<original name>`, so tags like `_180_LR` or `_3dh` that players read from the name stay intact.
-- **Dark, distraction-free UI** with drag & drop.
+- **Dark, distraction-free UI** in the style of macOS pro apps: a large preview, a floating playback bar, a timeline with a time ruler, and drag & drop.
 - **Scriptable.** Runs headless from the command line too.
 
 ## What metadata is preserved
@@ -167,6 +173,7 @@ Needs Xcode or the Command Line Tools (Swift 6), plus `brew install ffmpeg exift
 | **E** | Single view: show one eye of stereo video |
 | **M** | Mute / unmute the preview |
 | **H** | Toggle the headset parameter overlay |
+| **I** | Show or hide the inspector |
 | **⌘O** | Open video |
 | **⌘S** | Export |
 
@@ -203,11 +210,12 @@ Times are in seconds, and parts are joined in the given order.
 Sources/CutVR/
   App.swift           app entry, About panel, menu, command-line mode
   EditorModel.swift   clips, cutting, playback mapping, export
-  Views.swift         main window
+  Views.swift         main window: toolbar, viewer, edit bar, inspector, status bar
   TimelineView.swift  clip timeline with scissors tool
   PreviewViews.swift  video preview and headset overlay
   Tools.swift         ffmpeg/exiftool runner, VR probe, exporter
   VRBoxes.swift       byte-exact MP4/MOV VR box transfer
+  PatchedAsset.swift  in-memory hev1 → hvc1 patch so macOS can preview such HEVC
   Updater.swift       self-update from GitHub Releases
 Icon/make_icon.swift  generates the app icon
 build.sh              builds dist/CutVR.app (universal, versioned)

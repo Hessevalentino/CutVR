@@ -31,8 +31,8 @@ struct CutVRApp: App {
             ContentView().environmentObject(model).environmentObject(updater)
                 .onAppear { updater.checkOnLaunch() }
         }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 780, height: 600)
+        .windowToolbarStyle(.unified(showsTitle: true))
+        .defaultSize(width: 1180, height: 760)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About CutVR") { showAbout() }

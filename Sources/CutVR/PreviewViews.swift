@@ -1,56 +1,126 @@
 import SwiftUI
 import AVFoundation
 
-/// Video and VR parameters relevant for headset playback, drawn over the preview.
-struct HeadsetOverlay: View {
-    @EnvironmentObject var model: EditorModel
-
-    var body: some View {
-        let info = model.vrInfo
-        VStack(alignment: .leading, spacing: 2) {
-            row("Resolution", "\(Int(model.videoSize.width))×\(Int(model.videoSize.height))")
-            row("Frame rate", String(format: "%.2f fps", model.frameRate))
-            row("Codec", codecName(model.codec))
-            row("Bitrate", model.bitrate > 0 ? String(format: "%.1f Mbps", model.bitrate / 1_000_000) : "–")
-            row("Layout", layout(info))
-            row("Projection", info?.projection ?? "not set")
-            row("Name tags", info.map { $0.filenameTags.isEmpty ? "none" : $0.filenameTags.joined(separator: " ") } ?? "…")
-            row("Headset", detection(info))
-        }
-        .font(.system(size: 10, design: .monospaced))
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.65)))
-        .allowsHitTesting(false)
+/// Human-readable descriptions of the loaded video, shared by the inspector and the preview overlay.
+@MainActor
+enum Describe {
+    static func resolution(_ m: EditorModel) -> String {
+        m.videoSize.width > 0 ? "\(Int(m.videoSize.width)) × \(Int(m.videoSize.height))" : "–"
     }
 
-    private func row(_ k: String, _ v: String) -> some View {
-        HStack(spacing: 6) {
-            Text(k).foregroundStyle(Theme.text2).frame(width: 74, alignment: .leading)
-            Text(v).foregroundStyle(.white)
-        }
+    static func frameRate(_ m: EditorModel) -> String { String(format: "%.2f fps", m.frameRate) }
+
+    static func bitrate(_ m: EditorModel) -> String {
+        m.bitrate > 0 ? String(format: "%.1f Mbps", m.bitrate / 1_000_000) : "–"
     }
 
-    private func codecName(_ fourCC: String) -> String {
+    static func codec(_ fourCC: String) -> String {
         let names = ["avc1": "H.264", "avc3": "H.264", "hvc1": "HEVC", "hev1": "HEVC", "dvh1": "Dolby Vision",
                      "av01": "AV1", "vp09": "VP9", "apcn": "ProRes 422", "apch": "ProRes 422 HQ", "ap4h": "ProRes 4444"]
         guard !fourCC.isEmpty else { return "–" }
         return names[fourCC].map { "\($0) (\(fourCC))" } ?? fourCC
     }
 
-    private func layout(_ info: VRInfo?) -> String {
-        if let s = info?.stereoMode { return s }
+    static func layout(_ m: EditorModel) -> String {
+        if let s = m.vrInfo?.stereoMode { return s }
         // Guess from frame shape when nothing is embedded.
-        let ratio = model.videoSize.height > 0 ? model.videoSize.width / model.videoSize.height : 0
-        if ratio > 1.8 && ratio < 2.2 { return "side by side? (guess)" }
-        if ratio > 0.9 && ratio < 1.1 { return "top-bottom / mono? (guess)" }
+        let ratio = m.videoSize.height > 0 ? m.videoSize.width / m.videoSize.height : 0
+        if ratio > 1.8 && ratio < 2.2 { return "side by side (guess)" }
+        if ratio > 0.9 && ratio < 1.1 { return "top-bottom or mono (guess)" }
         return "unknown"
     }
 
-    private func detection(_ info: VRInfo?) -> String {
-        guard let info else { return "…" }
-        if info.hasEmbedded { return "auto (embedded metadata)" }
-        if !info.filenameTags.isEmpty { return "by file name only" }
-        return "manual setting needed"
+    static func projection(_ m: EditorModel) -> String { m.vrInfo.map { $0.projection ?? "not set" } ?? "…" }
+
+    static func nameTags(_ m: EditorModel) -> String {
+        m.vrInfo.map { $0.filenameTags.isEmpty ? "none" : $0.filenameTags.map { "_" + $0 }.joined(separator: " ") } ?? "…"
+    }
+}
+
+/// How a headset player will recognise the video.
+enum HeadsetStatus {
+    case checking, embedded(Int), fileName, none
+
+    init(_ info: VRInfo?) {
+        guard let info else { self = .checking; return }
+        if info.hasEmbedded { self = .embedded(info.entries.count) }
+        else if !info.filenameTags.isEmpty { self = .fileName }
+        else { self = .none }
+    }
+
+    var title: String {
+        switch self {
+        case .checking: return "Checking…"
+        case .embedded: return "Headset ready"
+        case .fileName: return "Detected by file name"
+        case .none: return "No VR metadata"
+        }
+    }
+
+    var short: String {
+        switch self {
+        case .checking: return "Checking…"
+        case .embedded(let n): return "VR metadata · \(n)"
+        case .fileName: return "VR by file name"
+        case .none: return "No VR metadata"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .checking: return "Reading the file's VR metadata."
+        case .embedded: return "Players detect the format automatically. CutVR keeps every entry 1:1 on export."
+        case .fileName: return "No embedded metadata, but players that read file names (DeoVR, HereSphere, Skybox) detect it. The name is kept on export."
+        case .none: return "Headsets will show it flat. Set the format in the player, or add a tag such as _180_LR to the export name."
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .checking: return "hourglass"
+        case .embedded: return "checkmark.seal.fill"
+        case .fileName: return "textformat"
+        case .none: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .checking: return Theme.text2
+        case .embedded: return Theme.ok
+        case .fileName: return Theme.warn
+        case .none: return .orange
+        }
+    }
+}
+
+/// Video and VR parameters relevant for headset playback, drawn over the preview.
+struct HeadsetOverlay: View {
+    @EnvironmentObject var model: EditorModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            row("Resolution", Describe.resolution(model))
+            row("Frame rate", Describe.frameRate(model))
+            row("Codec", Describe.codec(model.codec))
+            row("Bitrate", Describe.bitrate(model))
+            row("Layout", Describe.layout(model))
+            row("Projection", Describe.projection(model))
+            row("Name tags", Describe.nameTags(model))
+            row("Headset", HeadsetStatus(model.vrInfo).title)
+        }
+        .font(.system(size: 10.5, design: .monospaced))
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .environment(\.colorScheme, .dark)
+        .allowsHitTesting(false)
+    }
+
+    private func row(_ k: String, _ v: String) -> some View {
+        HStack(spacing: 8) {
+            Text(k).foregroundStyle(Theme.text2).frame(width: 76, alignment: .leading)
+            Text(v).foregroundStyle(.white)
+        }
     }
 }
 
