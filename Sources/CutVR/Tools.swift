@@ -220,6 +220,24 @@ enum Exporter {
         return ia.isEqual(ib)
     }
 
+    /// Data streams ffmpeg cannot identify (e.g. a QuickTime timecode track `tmcd` in MP4). Stream copy
+    /// cannot write them back ("Could not find tag for codec none"), so the cut leaves them out.
+    static func unwritableDataStreams(_ source: URL) async -> [(index: Int, tag: String)] {
+        guard let ffprobe = Tool.path("ffprobe"),
+              let r = try? await runProcess(ffprobe, ["-v", "error", "-show_entries",
+                                                      "stream=index,codec_type,codec_name,codec_tag_string",
+                                                      "-of", "json", source.path]),
+              let json = try? JSONSerialization.jsonObject(with: Data(r.stdout.utf8)) as? [String: Any],
+              let streams = json["streams"] as? [[String: Any]]
+        else { return [] }
+        return streams.compactMap { s in
+            guard s["codec_type"] as? String == "data", let index = s["index"] as? Int else { return nil }
+            let codec = s["codec_name"] as? String ?? ""
+            guard codec.isEmpty || codec == "unknown" || codec == "none" else { return nil }
+            return (index, s["codec_tag_string"] as? String ?? "?")
+        }
+    }
+
     static func cut(source: URL, start: Double, end: Double, dest: URL,
                     started: ((Process) -> Void)? = nil,
                     progress: ((Double, String) -> Void)? = nil) async -> ExportReport {
@@ -272,12 +290,15 @@ enum Exporter {
             }
         }
 
+        let dropped = await unwritableDataStreams(source)
+        let dropArgs = dropped.flatMap { ["-map", "-0:\($0.index)"] }
+
         // -ss before -i + stream copy: starts at the keyframe <= start. Segment starts are already keyframes;
         // +1 ms makes sure ffmpeg doesn't fall back to the previous one because of rounding.
         func cutArgs(_ seg: Segment, to url: URL) -> [String] {
             ["-ss", String(format: "%.6f", seg.start + 0.001), "-i", source.path,
              "-t", String(format: "%.6f", seg.length), "-avoid_negative_ts", "make_zero"]
-                + outputArgs + ["-progress", "pipe:1", "-nostats", url.path]
+                + outputArgs + dropArgs + ["-progress", "pipe:1", "-nostats", url.path]
         }
 
         if segments.count == 1 {
@@ -321,6 +342,11 @@ enum Exporter {
         }
 
         var notes: [String] = []
+        // A timecode track needs no note: the mp4/mov muxer writes a new one from the video's timecode tag.
+        let lost = dropped.map(\.tag).filter { $0 != "tmcd" }
+        if !lost.isEmpty {
+            notes.append("Left out data track(s) that cannot be copied: " + lost.joined(separator: ", ") + ".")
+        }
         var boxesOK = true
         var added: VRBoxes.TrackVR?
         var addedFormat: VRFormat?
