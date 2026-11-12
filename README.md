@@ -10,16 +10,41 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hessevalentino/CutVR/releases/latest/download/CutVR.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" height="48" alt="Download CutVR for macOS"></a>
+  &nbsp;
+  <a href="https://github.com/Hessevalentino/CutVR/releases/latest"><img src="https://img.shields.io/github/v/release/Hessevalentino/CutVR?style=for-the-badge&label=latest&color=2ea44f" height="48" alt="Latest release"></a>
+</p>
+
+<p align="center">
+  <sub><b>Free</b> · <b>Universal</b> (Apple Silicon + Intel) · <b>macOS 15+</b> · <b>Signed &amp; notarized by Apple</b> · ~1.6 MB</sub>
+</p>
+
+<p align="center">
   <img src="docs/preview-top.jpg" width="100%" alt="CutVR – lossless VR video editing">
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hessevalentino/CutVR/releases"><img src="https://img.shields.io/github/downloads/Hessevalentino/CutVR/total?logo=github&label=downloads&color=4d8dff" alt="Total downloads"></a>
+  <a href="https://github.com/Hessevalentino/CutVR/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/Hessevalentino/CutVR/build.yml?branch=main&logo=githubactions&logoColor=white&label=build" alt="Build status"></a>
+  <a href="https://github.com/Hessevalentino/CutVR/commits/main"><img src="https://img.shields.io/github/last-commit/Hessevalentino/CutVR?label=last%20commit&color=555555" alt="Last commit"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Hessevalentino/CutVR?color=blue" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/notarized-Apple-000000?logo=apple&logoColor=white" alt="Notarized by Apple">
+  <img src="https://img.shields.io/badge/signed-Developer%20ID-000000?logo=apple&logoColor=white" alt="Signed with Developer ID">
   <img src="https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white" alt="macOS 15+">
+  <img src="https://img.shields.io/badge/universal-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="Universal binary">
+  <img src="https://img.shields.io/badge/price-free-2ea44f" alt="Free">
+  <img src="https://img.shields.io/badge/privacy-no%20tracking-2ea44f" alt="No tracking">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/SwiftUI-native-0D96F6?logo=swift&logoColor=white" alt="SwiftUI">
   <img src="https://img.shields.io/badge/powered%20by-FFmpeg-007808?logo=ffmpeg&logoColor=white" alt="FFmpeg">
   <img src="https://img.shields.io/badge/ExifTool-metadata-555555" alt="ExifTool">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/dependencies-none%20bundled-555555" alt="No bundled dependencies">
 </p>
 
 <p align="center">
@@ -28,6 +53,8 @@
   <img src="https://img.shields.io/badge/VR360-%E2%9C%93-6f42c1" alt="VR360">
   <img src="https://img.shields.io/badge/stereo-SBS%20%7C%20TB-6f42c1" alt="Stereo SBS / TB">
   <img src="https://img.shields.io/badge/8K-ready-6f42c1" alt="8K ready">
+  <img src="https://img.shields.io/badge/HEVC%20%7C%20H.264-%E2%9C%93-6f42c1" alt="HEVC and H.264">
+  <img src="https://img.shields.io/badge/MP4%20%7C%20MOV-%E2%9C%93-6f42c1" alt="MP4 and MOV">
 </p>
 
 <p align="center">
@@ -45,6 +72,20 @@
   <img src="https://img.shields.io/badge/Skybox-player-FF6A00" alt="Skybox">
   <img src="https://img.shields.io/badge/YouTube%20VR-FF0000?logo=youtube&logoColor=white" alt="YouTube VR">
 </p>
+
+## At a glance
+
+| | |
+|---|---|
+| **What it does** | Cuts and joins VR video losslessly, keeping every headset tag byte for byte |
+| **Speed** | ~1.5 s to cut 30 s from a 13 GB 8K file, ~4.5 s to join four parts |
+| **Formats** | 180° / 360°, stereo side-by-side or top-bottom, mono · `.mp4` and `.mov` · H.264 and HEVC up to 8K |
+| **VR metadata** | Google Spherical V1 + V2, Apple spatial (`vexu`, `hfov`), QuickTime user data, file-name tags |
+| **System** | macOS 15 or newer · universal binary for Apple Silicon and Intel |
+| **Needs** | FFmpeg and ExifTool from Homebrew: `brew install ffmpeg exiftool` |
+| **Security** | Signed with an Apple Developer ID, notarized by Apple, hardened runtime |
+| **Privacy** | Everything runs locally. The only network request is the update check on GitHub |
+| **Price** | Free and open source (MIT) |
 
 ---
 
@@ -126,6 +167,10 @@ Changed your mind? **⌘Z**.
 > **Why not just use FFmpeg?** Because `ffmpeg -c copy` alone silently breaks VR files. Into `.mov` it drops `st3d`/`sv3d` entirely. Into `.mp4` it adds a `vexu` box that overrides the stereo mode, so readers see it as "unspecified". The Google V1 tag is always lost. CutVR lets FFmpeg do the fast cutting, then writes the source's VR boxes back byte for byte.
 
 ## Download
+
+<p>
+  <a href="https://github.com/Hessevalentino/CutVR/releases/latest/download/CutVR.dmg"><img src="https://img.shields.io/badge/Download_CutVR.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" height="40" alt="Download CutVR.dmg"></a>
+</p>
 
 1. Download **[CutVR.dmg](https://github.com/Hessevalentino/CutVR/releases/latest/download/CutVR.dmg)** from the [latest release](https://github.com/Hessevalentino/CutVR/releases/latest). It is a universal app for Apple Silicon and Intel. Prefer a zip? **[CutVR.zip](https://github.com/Hessevalentino/CutVR/releases/latest/download/CutVR.zip)** is there too.
 2. Open the DMG and drag **CutVR** onto the **Applications** folder next to it.
