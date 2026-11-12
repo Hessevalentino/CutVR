@@ -135,14 +135,13 @@ Changed your mind? **⌘Z**.
    brew install ffmpeg exiftool
    ```
 
-4. **First launch:** the app is not notarized by Apple, so macOS will warn you. Right-click **CutVR.app → Open → Open**. You only need to do this once.
-   If macOS still refuses, run `xattr -dr com.apple.quarantine /Applications/CutVR.app`.
+CutVR is signed with an Apple Developer ID and notarized by Apple, so it opens like any other Mac app, with no security warnings.
 
 Requires macOS 15 or newer.
 
 ## Updates
 
-CutVR keeps itself up to date. Every improvement pushed to this repository is automatically built and published as a new [release](https://github.com/Hessevalentino/CutVR/releases).
+CutVR keeps itself up to date. Every new version is signed, notarized and published as a [release](https://github.com/Hessevalentino/CutVR/releases).
 
 - At launch, CutVR checks GitHub. When a newer version exists, an **Update** button appears in the top bar.
 - You can also check at any time with **CutVR → Check for Updates…**
@@ -226,7 +225,8 @@ Sources/CutVR/
   Updater.swift       self-update from GitHub Releases
 Icon/make_icon.swift  generates the app icon
 build.sh              builds dist/CutVR.app (universal, versioned)
-.github/workflows/    builds and publishes a release on every push
+release-signed.sh     signs, notarizes and (with --publish) releases CutVR.dmg and CutVR.zip
+.github/workflows/    checks that every push builds
 ```
 
 ## License

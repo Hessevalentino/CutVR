@@ -31,5 +31,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSRequiresAquaSystemAppearance</key><false/>
 </dict></plist>
 PLIST
-codesign --force --sign - "$APP"
+# SIGN_IDENTITY set (e.g. "Developer ID Application: Valentino Hesse (395JXZ2H3J)") → signed with
+# hardened runtime + secure timestamp, ready for notarization. Unset → ad-hoc signature for local use.
+if [[ -n "$SIGN_IDENTITY" ]]; then
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+  codesign --verify --strict --verbose=2 "$APP"
+else
+  codesign --force --sign - "$APP"
+fi
 echo "Done: $PWD/$APP ($VERSION)"

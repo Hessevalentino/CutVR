@@ -6,3 +6,6 @@ Icon/AppIcon.iconset/
 *.mov
 *.m4v
 .DS_Store
+.grepai/
+.gitnexus/
+release/
